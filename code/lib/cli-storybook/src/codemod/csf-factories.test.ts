@@ -1,10 +1,22 @@
 import { posix } from 'node:path';
 
-import { expect, it } from 'vitest';
+import { beforeEach, expect, it, vi } from 'vitest';
+
+import { type JsPackageManager, syncStorybookAddons } from 'storybook/internal/common';
 
 import { dedent } from 'ts-dedent';
 
-import { SANDBOX_STORIES_GLOB, storyToCsf4 } from './csf-factories.ts';
+import { runCodemod } from '../automigrate/codemod.ts';
+import type { CommandFixRunOptions } from '../automigrate/types.ts';
+import { SANDBOX_STORIES_GLOB, csfFactories, storyToCsf4 } from './csf-factories.ts';
+
+vi.mock('storybook/internal/common', { spy: true });
+vi.mock('../automigrate/codemod.ts', { spy: true });
+
+beforeEach(() => {
+  vi.mocked(runCodemod).mockResolvedValue({ files: [], errorCount: 0 });
+  vi.mocked(syncStorybookAddons).mockResolvedValue(undefined);
+});
 
 const options = { previewConfigPath: '#.storybook/preview', useSubPathImports: true };
 const path = 'Button.stories.tsx';
@@ -169,4 +181,33 @@ it.each([
   'src/Button.stories.ts',
 ])('does not match %s in a sandbox', (file) => {
   expect(posix.matchesGlob(file, SANDBOX_STORIES_GLOB)).toBe(false);
+});
+
+it('imports defineMain from @storybook/react-native when a .rnstorybook main has no framework', async () => {
+  await csfFactories.run({
+    mainConfig: { stories: ['../stories/**/*.stories.tsx'] },
+    mainConfigPath: '.rnstorybook/main.ts',
+    previewConfigPath: '.rnstorybook/preview.tsx',
+    configDir: '.rnstorybook',
+    packageManager: {
+      primaryPackageJson: { packageJson: {}, operationDir: '.', packageJsonPath: 'package.json' },
+      writePackageJson: vi.fn(),
+    } as unknown as JsPackageManager,
+    yes: true,
+  } as CommandFixRunOptions);
+
+  const [, mainTransform] = vi
+    .mocked(runCodemod)
+    .mock.calls.find(([files]) => files?.[0] === '.rnstorybook/main.ts')!;
+  const output = await mainTransform({
+    path: '.rnstorybook/main.ts',
+    source: dedent`
+      import type { StorybookConfig } from '@storybook/react-native';
+      const config: StorybookConfig = { stories: ['../stories/**/*.stories.tsx'] };
+      export default config;
+    `,
+  });
+
+  expect(output).toContain('import { defineMain } from "@storybook/react-native/node";');
+  expect(output).not.toContain('your-framework-here');
 });

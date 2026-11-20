@@ -156,7 +156,10 @@ export const csfFactories: CommandFix = {
 
     logger.step('Applying codemod on your main config...');
     const frameworkPackage =
-      getFrameworkPackageName(mainConfig) || '@storybook/your-framework-here';
+      getFrameworkPackageName(mainConfig) ||
+      (isReactNativeStorybookPath(mainConfigPath)
+        ? '@storybook/react-native'
+        : '@storybook/your-framework-here');
     await runCodemod([mainConfigPath!], (fileInfo) =>
       configToCsfFactory(fileInfo, { configType: 'main', frameworkPackage }, { dryRun })
     );
