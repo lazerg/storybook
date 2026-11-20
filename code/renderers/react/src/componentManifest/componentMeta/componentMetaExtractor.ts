@@ -1273,6 +1273,26 @@ function getJSDocDefault(
   return undefined;
 }
 
+/**
+ * Builds a prop's description like react-docgen-typescript did: the free text followed by its JSDoc
+ * tags (except the default, which is read separately), one `@tag text` line each.
+ */
+function getPropDescription(
+  typescript: DocgenTypeScript,
+  prop: ts.Symbol,
+  checker: DocgenTypeChecker
+): string {
+  const description = typescript.displayPartsToString(
+    prop.getDocumentationComment(checker as ts.TypeChecker)
+  );
+  const tagLines = prop
+    .getJsDocTags(checker as ts.TypeChecker)
+    .filter((tag) => tag.name !== 'default' && tag.name !== 'defaultValue')
+    .map((tag) => `@${tag.name} ${typescript.displayPartsToString(tag.text)}`.trimEnd());
+
+  return [description, ...tagLines].join('\n').trim();
+}
+
 // ---------------------------------------------------------------------------
 // Single prop extraction
 // ---------------------------------------------------------------------------
@@ -1292,9 +1312,7 @@ function extractPropItem(
   const propType = typeOverride ?? checker.getTypeOfSymbolAtLocation(prop, contextNode);
   const type = serializeType(typescript, checker, propType, isRequired);
 
-  const description = typescript.displayPartsToString(
-    prop.getDocumentationComment(checker as ts.TypeChecker)
-  );
+  const description = getPropDescription(typescript, prop, checker);
 
   const parent = getParentType(typescript, prop);
   const declarations = getAllDeclarationParents(typescript, prop);

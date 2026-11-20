@@ -838,6 +838,36 @@ describe('prop extraction', () => {
       });
     });
 
+    it('keeps prop-level JSDoc tags in the description, like builder docgen did', async () => {
+      const entry = await extract(
+        'Stack',
+        dedent`
+          import React from 'react';
+          interface Props {
+            /**
+             * Space between children.
+             *
+             * @example "4"
+             * @example { initial: "2", md: "4" }
+             * @default "0"
+             */
+            gap?: string | Record<string, string>;
+          }
+          export const Stack = (props: Props) => <div />;
+        `
+      );
+
+      expect(entry.component?.reactComponentMeta).toMatchObject({
+        props: {
+          gap: {
+            description:
+              'Space between children.\n@example "4"\n@example { initial: "2", md: "4" }',
+            defaultValue: { value: '"0"' },
+          },
+        },
+      });
+    });
+
     it('extracts component-level description', async () => {
       const entry = await extract(
         'Button',
