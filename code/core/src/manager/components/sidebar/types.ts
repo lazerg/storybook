@@ -55,7 +55,7 @@ export interface ExpandType {
 export type SearchItem = Item & { refId: string; path: string[]; status?: StatusValue };
 
 export type SearchResult = Fuse.FuseResultWithMatches<SearchItem> &
-  Fuse.FuseResultWithScore<SearchItem>;
+  Fuse.FuseResultWithScore<SearchItem> & { storyId?: string };
 
 export type DownshiftItem = SearchResult | ExpandType;
 

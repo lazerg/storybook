@@ -294,9 +294,9 @@ export const Search = React.memo<SearchProps>(function Search({
       }
       if (isSearchResult(selectedItem)) {
         const { id: rawId, refId } = selectedItem.item;
-        const [storyId, anchor] = rawId.split('#');
+        const [itemId, anchor] = rawId.split('#');
 
-        api?.selectStory(storyId, undefined, {
+        api?.selectStory(selectedItem.storyId ?? itemId, undefined, {
           // @ts-expect-error (non strict)
           ref: refId !== DEFAULT_REF_ID && refId,
           scrollTo: anchor,
@@ -425,7 +425,7 @@ export const Search = React.memo<SearchProps>(function Search({
                   }
                 }
                 // @ts-expect-error (non strict)
-                acc.push({ item: resultItem, matches: [], score: 0 });
+                acc.push({ item: resultItem, matches: [], score: 0, storyId });
               }
             }
             return acc;

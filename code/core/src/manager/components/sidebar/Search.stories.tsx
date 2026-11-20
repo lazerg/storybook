@@ -75,6 +75,51 @@ export const LastViewed: StoryFn = () => (
   </Search>
 );
 
+const selectStory = fn().mockName('selectStory');
+
+/** A recently opened component reopens the story that was last viewed, not its first story. */
+export const LastViewedOpensLastStory: StoryFn = () => (
+  <Search {...baseProps} getLastViewed={() => [{ storyId: 'images--brand', refId }]}>
+    {({ query, results, closeMenu, getMenuProps, getItemProps, highlightedIndex }) => (
+      <SearchResults
+        query={query}
+        results={results}
+        closeMenu={closeMenu}
+        getMenuProps={getMenuProps}
+        getItemProps={getItemProps}
+        highlightedIndex={highlightedIndex}
+      />
+    )}
+  </Search>
+);
+LastViewedOpensLastStory.decorators = [
+  (storyFn) => (
+    <ManagerContext.Provider
+      value={
+        {
+          api: {
+            getShortcutKeys: () => ({ search: ['/'] }),
+            emit: fn(),
+            resolveStory: fn(),
+            selectStory,
+          } as unknown as API,
+        } as any
+      }
+    >
+      {storyFn()}
+    </ManagerContext.Provider>
+  ),
+];
+LastViewedOpensLastStory.play = async ({ canvasElement }) => {
+  selectStory.mockClear();
+  const canvas = within(canvasElement);
+  await userEvent.click(canvas.getByRole('searchbox'));
+  await userEvent.click(await canvas.findByText('Images'));
+  await waitFor(() =>
+    expect(selectStory).toHaveBeenCalledWith('images--brand', undefined, expect.anything())
+  );
+};
+
 const escapeAbove = fn().mockName('escapeAbove');
 
 /**
